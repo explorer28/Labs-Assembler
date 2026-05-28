@@ -1,0 +1,60 @@
+.486
+.model flat, stdcall
+option casemap :none
+
+include windows.inc
+include kernel32.inc
+include masm32.inc
+includelib kernel32.lib
+includelib masm32.lib
+
+.data
+    msgN    db "Введите число N: ", 0
+    msgRes  db "Факториал N! = ", 0
+    buffer  db 100 dup(?)
+.data?
+    hIn dd ? | hOut dd ? | written dd ?
+
+.code
+Factorial PROC
+    push ebp
+    mov ebp, esp
+    
+    mov eax, [ebp + 8]
+    cmp eax, 1
+    jbe _baseCase
+    
+    dec eax
+    push eax
+    call Factorial
+    
+    mov ecx, [ebp + 8]
+    mul ecx
+    jmp _endFact
+
+_baseCase:
+    mov eax, 1          ; 0! = 1! = 1
+_endFact:
+    pop ebp
+    ret 4
+Factorial ENDP
+
+entryPoint:
+    push STD_INPUT_HANDLE | call GetStdHandle | mov hIn, eax
+    push STD_OUTPUT_HANDLE | call GetStdHandle | mov hOut, eax
+
+    invoke PrintStr, offset msgN | call ReadInt
+    
+    push eax
+    call Factorial
+    
+    push eax
+    invoke PrintStr, offset msgRes
+    pop eax
+    
+    invoke dwtoa, eax, offset buffer
+    invoke PrintStr, offset buffer
+    
+    call ReadInt
+    push 0 | call ExitProcess
+end entryPoint
