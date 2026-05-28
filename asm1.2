@@ -1,0 +1,103 @@
+.486
+.model flat, stdcall
+option casemap :none
+
+include windows.inc
+include kernel32.inc
+include masm32.inc
+
+includelib kernel32.lib
+includelib masm32.lib
+
+.data
+    msgA      db "Введите число a: ", 0
+    msgB      db "Введите число b: ", 0
+    msgRes    db "Результат z = ((a+b)^2) / (a-b) = ", 0
+    msgErr    db "Ошибка: деление на ноль (a == b)!", 13, 10, 0
+    newline   db 13, 10, 0
+
+.data?
+    inputHandle    dd ?
+    outputHandle   dd ?
+    numberOfChars  dd ?
+    
+    buffer         db 100 dup(?)
+    resBuffer      db 100 dup(?)
+    
+    valA           dd ?
+    valB           dd ?
+
+.code
+
+PrintString PROC pStr:DWORD
+    push pStr
+    call lstrlen
+    push NULL
+    push offset numberOfChars
+    push EAX
+    push pStr
+    push outputHandle
+    call WriteConsole
+    ret
+PrintString ENDP
+
+ReadString PROC
+    push NULL
+    push offset numberOfChars
+    push 100
+    push offset buffer
+    push inputHandle
+    call ReadConsole
+    
+    mov edx, offset buffer
+    mov eax, numberOfChars
+    mov byte ptr [edx + eax - 2], 0
+    ret
+ReadString ENDP
+
+entryPoint:
+    push STD_INPUT_HANDLE
+    call GetStdHandle
+    mov inputHandle, EAX
+    
+    push STD_OUTPUT_HANDLE
+    call GetStdHandle
+    mov outputHandle, EAX
+
+    invoke PrintString, offset msgA
+    call ReadString
+    invoke atodw, offset buffer
+    mov valA, eax
+
+    invoke PrintString, offset msgB
+    call ReadString
+    invoke atodw, offset buffer
+    mov valB, eax
+
+    mov ecx, valA
+    sub ecx, valB
+    jz division_error
+
+    mov eax, valA
+    add eax, valB
+    imul eax
+
+    idiv ecx
+
+    push eax
+    invoke PrintString, offset msgRes
+    pop eax
+    
+    invoke dwtoa, eax, offset resBuffer
+    invoke PrintString, offset resBuffer
+    invoke PrintString, offset newline
+    jmp exit_label
+
+division_error:
+    invoke PrintString, offset msgErr
+
+exit_label:
+    call ReadString
+    push 0
+    call ExitProcess
+end entryPoint
