@@ -1,0 +1,30 @@
+.model small
+.stack 100h
+.data
+  TimePrmpt  db 'Уже день? (д/н)$'
+  GoodMorningMsg db 'Доброе утро!', 13, 10, '$'
+  GoodAfternoonMsg db 'Добрый день!', 13, 10, '$'
+  .code
+  start:
+  mov ax, @data
+  mov ds, ax
+  mov ds, offset TimePrmpt
+  mov ah, 9
+  int 21h
+  mov ah, 1
+  int 21h
+  cmp al, 'д'
+  jz is_afternoon
+  cmp al, 'Д'
+  jnz is_morning
+is_afternoon:
+  mov dx, offset GoodAfternoonMsg
+  jmp display_greeting
+is_morning:
+  mov dx, offset GoodMorningMsg
+display_greeting
+  mov ah, 9
+  int 21h
+  mov ah, 4ch
+  int 21h
+end start
