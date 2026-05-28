@@ -1,0 +1,42 @@
+.data
+    msgN    db "Введите количество элементов N: ", 0
+    msgRes  db "Сумма Фибоначчи = ", 0
+    buffer  db 100 dup(?)
+.data?
+    hIn dd ? | hOut dd ? | written dd ? | N dd ?
+.code
+entryPoint:
+    push STD_INPUT_HANDLE | call GetStdHandle | mov hIn, eax
+    push STD_OUTPUT_HANDLE | call GetStdHandle | mov hOut, eax
+
+    invoke PrintStr, offset msgN | call ReadInt | mov N, eax
+    
+    cmp eax, 0
+    jle _zero
+    
+    mov ecx, eax
+    mov eax, 1 
+    mov ebx, 1 
+    mov edx, 0
+
+_loop:
+    add edx, eax
+    mov esi, eax
+    add esi, ebx 
+    mov eax, ebx  
+    mov ebx, esi
+    dec ecx
+    jnz _loop
+    
+    mov eax, edx
+    jmp _print
+
+_zero:
+    mov eax, 0
+_print:
+    invoke PrintStr, offset msgRes
+    invoke dwtoa, eax, offset buffer
+    invoke PrintStr, offset buffer
+    call ReadInt
+    push 0 | call ExitProcess
+end entryPoint
