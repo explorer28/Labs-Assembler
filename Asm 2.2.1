@@ -1,0 +1,11 @@
+;hello_1.asm
+.model tiny
+.code
+  org 100h
+start:
+  mov ah, 9
+  mov ax, offset message
+  int 21h
+  int 20h
+message db 'Hello world!', 13, 10, '$'
+end start
