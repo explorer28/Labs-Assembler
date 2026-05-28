@@ -1,0 +1,92 @@
+.486
+.model flat, stdcall
+option casemap :none
+
+include windows.inc
+include kernel32.inc
+include masm32.inc
+includelib kernel32.lib
+includelib masm32.lib
+
+.data
+    msgX      db "Введите x: ", 0
+    msgY      db "Введите y: ", 0
+    msgZ      db "Результат z = ", 0
+    msgErr    db "Ошибка: деление на ноль!", 13, 10, 0
+    buffer    db 100 dup(?)
+
+.data?
+    hIn       dd ?
+    hOut      dd ?
+    written   dd ?
+    x         dd ?
+    y         dd ?
+    num       dd ?
+    den       dd ?
+
+.code
+PrintStr PROC pStr:DWORD
+    push pStr | call lstrlen
+    push NULL | push offset written | push EAX | push pStr | push hOut | call WriteConsole
+    ret
+PrintStr ENDP
+
+ReadInt PROC
+    push NULL | push offset written | push 100 | push offset buffer | push hIn | call ReadConsole
+    mov edx, offset buffer | mov eax, written
+    mov byte ptr [edx + eax - 2], 0
+    push offset buffer | call atodw
+    ret
+ReadInt ENDP
+
+entryPoint:
+    push STD_INPUT_HANDLE | call GetStdHandle | mov hIn, eax
+    push STD_OUTPUT_HANDLE | call GetStdHandle | hOut, eax
+
+    invoke PrintStr, offset msgX | call ReadInt | mov x, eax
+    invoke PrintStr, offset msgY | call ReadInt | mov y, eax
+
+    mov eax, x
+    cmp eax, 5
+    jge @f
+    mov eax, 5
+@@:
+    mov ebx, y
+    cmp ebx, 5
+    jge @f
+    mov ebx, 5
+@@:
+    cmp eax, ebx
+    jle @f
+    mov eax, ebx
+@@:
+    mov num, eax
+
+    mov eax, x
+    sub eax, y
+    jns @f
+    neg eax
+@@:
+    mov ebx, 10
+    cmp eax, ebx
+    jle @f
+    mov eax, ebx 
+@@:
+    mov den, eax
+    jz _error
+
+    mov eax, num
+    cdq
+    idiv den 
+
+    invoke PrintStr, offset msgZ
+    invoke dwtoa, eax, offset buffer
+    invoke PrintStr, offset buffer
+    jmp _exit
+
+_error:
+    invoke PrintStr, offset msgErr
+_exit:
+    call ReadInt
+    push 0 | call ExitProcess
+end entryPoint
