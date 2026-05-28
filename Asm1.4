@@ -1,0 +1,112 @@
+.486
+.model flat, stdcall
+option casemap :none
+
+include windows.inc
+include kernel32.inc
+include user32.inc
+include masm32.inc
+includelib kernel32.lib
+includelib user32.lib
+includelib masm32.lib
+
+.data
+    fmtSum     db "Сумма элементов: %d", 13, 10, 0
+    fmtArr     db "Массив: ", 0
+    fmtElem    db "%d ", 0
+    newline    db 13, 10, 0
+.data?
+    hOut       dd ?
+    written    dd ?
+    array      dd 12 dup(?)
+    outBuf     db 512 dup(?)
+
+.code
+FillFib PROC pArr:DWORD, count:DWORD
+    mov edi, pArr
+    mov ecx, count
+    cmp ecx, 0 | jle _ret
+    mov dword ptr [edi], 1 | add edi, 4 | dec ecx | jz _ret
+    mov dword ptr [edi], 1 | add edi, 4 | dec ecx | jz _ret
+    
+    mov eax, 1 ; F(i-2)
+    mov ebx, 1 ; F(i-1)
+_fLoop:
+    mov edx, eax
+    add edx, ebx ; EDX = F(i)
+    mov [edi], edx
+    mov eax, ebx
+    mov ebx, edx
+    add edi, 4
+    loop _fLoop
+_ret:
+    ret
+FillFib ENDP
+
+ProcessArray PROC pArr:DWORD, count:DWORD
+    mov esi, pArr
+    mov ecx, count
+_pLoop:
+    mov eax, [esi]
+    test eax, 1
+    jnz _skip
+    imul eax
+    mov [esi], eax
+_skip:
+    add esi, 4
+    loop _pLoop
+    ret
+ProcessArray ENDP
+
+SumArray PROC pArr:DWORD, count:DWORD
+    mov esi, pArr
+    mov ecx, count
+    xor eax, eax
+_sLoop:
+    add eax, [esi]
+    add esi, 4
+    loop _sLoop
+    ret
+SumArray ENDP
+
+PrintArray PROC pArr:DWORD, count:DWORD
+    push offset fmtArr | call Print
+    mov esi, pArr
+    mov ecx, count
+_prLoop:
+    push ecx
+    invoke wsprintf, offset outBuf, offset fmtElem, dword ptr [esi]
+    push offset outBuf | call Print
+    add esi, 4
+    pop ecx
+    loop _prLoop
+    push offset newline | call Print
+    ret
+PrintArray ENDP
+
+Print PROC pStr:DWORD
+    push pStr | call lstrlen
+    push NULL | push offset written | push EAX | push pStr | push hOut | call WriteConsole
+    ret
+Print ENDP
+
+entryPoint:
+    push STD_OUTPUT_HANDLE | call GetStdHandle | mov hOut, eax
+
+    invoke FillFib, offset array, 12
+    invoke PrintArray, offset array, 12
+
+    invoke SumArray, offset array, 12
+    invoke wsprintf, offset outBuf, offset fmtSum, eax
+    invoke Print, offset outBuf
+
+    invoke ProcessArray, offset array, 12
+    invoke PrintArray, offset array, 12
+
+    invoke SumArray, offset array, 12
+    invoke wsprintf, offset outBuf, offset fmtSum, eax
+    invoke Print, offset outBuf
+
+    push 10000 | call Sleep
+    push 0 | call ExitProcess
+end entryPoint
