@@ -1,0 +1,140 @@
+.486
+.model flat, stdcall
+option casemap :none
+
+include windows.inc
+include kernel32.inc
+include user32.inc
+include masm32.inc
+
+includelib kernel32.lib
+includelib user32.lib
+includelib masm32.lib
+
+.data
+    pattern db " ╒══════════╗", 13, 10
+            db " │%s║", 13, 10
+            db "╓──────────┼──────────╜", 13, 10
+            db "║%s│", 13, 10
+            db "╙──────────┼──────────╖", 13, 10
+            db " │%s║", 13, 10
+            db " ╘══════════╝", 13, 10, 0
+
+    msgPrompt db "Введите 3 строки по очереди:", 13, 10, 0
+
+.data?
+    inputHandle    dd ?
+    outputHandle   dd ?
+    numberOfChars  dd ?
+    
+    rawBuffer      db 100 dup(?)
+    
+    strA           db 11 dup(?)
+    strB           db 11 dup(?)
+    strC           db 11 dup(?)
+    
+    resultBuffer   db 1024 dup(?)
+
+.code
+
+NormalizeString PROC USES esi edi ecx, pDest:DWORD, pSrc:DWORD, len:DWORD
+    mov edi, pDest
+    mov ecx, 10
+    mov al, ' '
+    rep stosb
+    mov byte ptr [edi], 0 ; нуль-терминатор в конец
+    
+    mov esi, pSrc
+    mov ecx, 0
+@@:
+    cmp ecx, len
+    jge copy_chars
+    mov al, [esi + ecx]
+    cmp al, 13
+    je copy_chars
+    cmp al, 10
+    je copy_chars
+    inc ecx
+    jmp @b
+
+copy_chars:
+    cmp ecx, 10
+    jbe @f
+    mov ecx, 10
+@@:
+    test ecx, ecx
+    jz done
+    mov edi, pDest
+    mov esi, pSrc
+    rep movsb
+done:
+    ret
+NormalizeString ENDP
+
+
+entryPoint:
+    push STD_INPUT_HANDLE
+    call GetStdHandle
+    mov inputHandle, EAX
+    
+    push STD_OUTPUT_HANDLE
+    call GetStdHandle
+    mov outputHandle, EAX
+    
+    push offset msgPrompt
+    call lstrlen
+    push NULL
+    push offset numberOfChars
+    push EAX
+    push offset msgPrompt
+    push outputHandle
+    call WriteConsole
+
+    push NULL
+    push offset numberOfChars
+    push 100
+    push offset rawBuffer
+    push inputHandle
+    call ReadConsole
+    
+    invoke NormalizeString, offset strA, offset rawBuffer, numberOfChars
+
+    push NULL
+    push offset numberOfChars
+    push 100
+    push offset rawBuffer
+    push inputHandle
+    call ReadConsole
+    
+    invoke NormalizeString, offset strB, offset rawBuffer, numberOfChars
+
+    push NULL
+    push offset numberOfChars
+    push 100
+    push offset rawBuffer
+    push inputHandle
+    call ReadConsole
+    
+    invoke NormalizeString, offset strC, offset rawBuffer, numberOfChars
+
+    invoke wsprintf, offset resultBuffer, offset pattern, offset strA, offset strB, offset strC
+    
+    push offset resultBuffer
+    call lstrlen
+    push NULL
+    push offset numberOfChars
+    push EAX
+    push offset resultBuffer
+    push outputHandle
+    call WriteConsole
+
+    push NULL
+    push offset numberOfChars
+    push 1
+    push offset rawBuffer
+    push inputHandle
+    call ReadConsole
+
+    push 0
+    call ExitProcess
+end entryPoint
